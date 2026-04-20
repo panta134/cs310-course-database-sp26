@@ -1,45 +1,57 @@
 package edu.jsu.mcis.cs310.coursedb.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
+import com.github.cliftonlabs.json_simple.*;
+import java.util.ArrayList;
 
-public class SectionDAO {
+public class DAOUtility {
+    
+    public static final int TERMID_SP26 = 1;
+    
+    public static String getResultSetAsJson(ResultSet rs) {
+        
+        JsonArray records = new JsonArray();
+        
+        try {
+        
+            if (rs != null) {
 
-    private static final String QUERY =
-        "SELECT * FROM section WHERE termid = ? AND subjectid = ? AND num = ? ORDER BY crn";
+                // Get Metadata
+                ResultSetMetaData md = rs.getMetaData();
+                int columnCount = md.getColumnCount();
 
-    private DAOFactory factory;
+                // Iterate through each row of the ResultSet
+                while (rs.next()) {
+                    
+                    JsonObject obj = new JsonObject();
 
-    public SectionDAO(DAOFactory factory) {
-        this.factory = factory;
-    }
+                    // For each column in the current row
+                    for (int i = 1; i <= columnCount; i++) {
+                        
+                        String key = md.getColumnLabel(i);
+                        Object value = rs.getObject(i);
 
-    public String findSectionData(int termId, String subjectId, String courseNumber) {
+                        // convert all values to Strings.
+          
+                        if (value != null) {
+                            obj.put(key, value.toString());
+                        } else {
+                            obj.put(key, null);
+                        }
+                    }
 
-        String resultJson = "[]";
-
-        try (Connection connection = factory.getConnection()) {
-
-            if (connection == null || !connection.isValid(2)) {
-                return resultJson;
-            }
-
-            try (PreparedStatement statement = connection.prepareStatement(QUERY)) {
-
-                statement.setInt(1, termId);
-                statement.setString(2, subjectId);
-                statement.setString(3, courseNumber);
-
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    resultJson = DAOUtility.getResultSetAsJson(resultSet);
+                    // Add the row as a JsonObject to our array
+                    records.add(obj);
                 }
             }
-
-        } catch (Exception e) {
+            
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
-
-        return resultJson;
+        
+        return Jsoner.serialize(records);
+        
     }
+    
 }
